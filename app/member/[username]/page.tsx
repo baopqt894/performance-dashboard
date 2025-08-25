@@ -42,12 +42,12 @@ export interface MemberActivity {
     }
   }>
   reviews?: Array<{
-    id: string
-    repo: string
-    owner: string
-    title: string
-    date: string
-    html_url: string
+  id: string
+  repo: string
+  owner: string
+  pr_id: string // changed from title to pr_id
+  date: string
+  html_url: string
   }>
 }
 
@@ -71,6 +71,19 @@ export default function MemberDetailPage() {
       to: toParam || "25/08/2025",
     }
   })
+
+  // Pagination states
+  const PAGE_SIZE = 10
+  const [commitsPage, setCommitsPage] = useState(1)
+  const [pullRequestsPage, setPullRequestsPage] = useState(1)
+  const [reviewsPage, setReviewsPage] = useState(1)
+
+  // Reset page when tab or date changes
+  useEffect(() => {
+    setCommitsPage(1)
+    setPullRequestsPage(1)
+    setReviewsPage(1)
+  }, [activeTab, dateRange])
 
   const fetchMemberActivity = async (from: string, to: string) => {
     try {
@@ -128,58 +141,75 @@ export default function MemberDetailPage() {
       return <div className="text-center py-8 text-gray-500">Không có commit nào trong khoảng thời gian này</div>
     }
 
+    const totalPages = Math.ceil(activity.commits.length / PAGE_SIZE)
+    const paginatedCommits = activity.commits.slice((commitsPage - 1) * PAGE_SIZE, commitsPage * PAGE_SIZE)
+
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Message</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Date</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">SHA</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.commits.map((commit) => (
-              <tr key={commit.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4">
-                  <div className="font-medium text-gray-900" title={commit.message}>
-                    {commit.message.length > 50 ? `${commit.message.substring(0, 50)}...` : commit.message}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <Badge variant="outline" className="text-xs">
-                    {commit.owner}/{commit.repo}
-                  </Badge>
-                </td>
-                <td className="py-3 px-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {formatDate(commit.date)}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-1 text-sm font-mono text-gray-600">
-                    <Hash className="h-4 w-4" />
-                    {commit.sha.substring(0, 7)}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <a
-                    href={commit.commit_raw.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    View
-                  </a>
-                </td>
+      <div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Message</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">SHA</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedCommits.map((commit) => (
+                <tr key={commit.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">
+                    <div className="font-medium text-gray-900" title={commit.message}>
+                      {commit.message.length > 50 ? `${commit.message.substring(0, 50)}...` : commit.message}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge variant="outline" className="text-xs">
+                      {commit.owner}/{commit.repo}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(commit.date)}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-1 text-sm font-mono text-gray-600">
+                      <Hash className="h-4 w-4" />
+                      {commit.sha.substring(0, 7)}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <a
+                      href={commit.commit_raw.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center mt-4 gap-2">
+            <Button variant="outline" size="sm" disabled={commitsPage === 1} onClick={() => setCommitsPage(commitsPage - 1)}>
+              Previous
+            </Button>
+            <span className="text-sm">Page {commitsPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={commitsPage === totalPages} onClick={() => setCommitsPage(commitsPage + 1)}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
@@ -189,60 +219,77 @@ export default function MemberDetailPage() {
       return <div className="text-center py-8 text-gray-500">Không có pull request nào trong khoảng thời gian này</div>
     }
 
+    const totalPages = Math.ceil(activity.pull_requests.length / PAGE_SIZE)
+    const paginatedPRs = activity.pull_requests.slice((pullRequestsPage - 1) * PAGE_SIZE, pullRequestsPage * PAGE_SIZE)
+
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Title</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">State</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Created</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.pull_requests.map((pr) => (
-              <tr key={`${pr.pr_id}-${pr.repo}`} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4">
-                  <div className="font-medium text-gray-900">{pr.pr_raw.title}</div>
-                </td>
-                <td className="py-3 px-4">
-                  <Badge variant="outline" className="text-xs">
-                    {pr.owner}/{pr.repo}
-                  </Badge>
-                </td>
-                <td className="py-3 px-4">
-                  <Badge
-                    variant={pr.pr_raw.state === "closed" ? "secondary" : "default"}
-                    className={
-                      pr.pr_raw.state === "closed" ? "bg-purple-100 text-purple-800" : "bg-green-100 text-green-800"
-                    }
-                  >
-                    {pr.pr_raw.state}
-                  </Badge>
-                </td>
-                <td className="py-3 px-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {formatDate(pr.pr_raw.created_at)}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <a
-                    href={pr.pr_raw.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    View
-                  </a>
-                </td>
+      <div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Title</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">State</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Created</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedPRs.map((pr) => (
+                <tr key={`${pr.pr_id}-${pr.repo}`} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">
+                    <div className="font-medium text-gray-900">{pr.pr_raw.title}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge variant="outline" className="text-xs">
+                      {pr.owner}/{pr.repo}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge
+                      variant={pr.pr_raw.state === "closed" ? "secondary" : "default"}
+                      className={
+                        pr.pr_raw.state === "closed" ? "bg-purple-100 text-purple-800" : "bg-green-100 text-green-800"
+                      }
+                    >
+                      {pr.pr_raw.state}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(pr.pr_raw.created_at)}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <a
+                      href={pr.pr_raw.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center mt-4 gap-2">
+            <Button variant="outline" size="sm" disabled={pullRequestsPage === 1} onClick={() => setPullRequestsPage(pullRequestsPage - 1)}>
+              Previous
+            </Button>
+            <span className="text-sm">Page {pullRequestsPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={pullRequestsPage === totalPages} onClick={() => setPullRequestsPage(pullRequestsPage + 1)}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
@@ -252,49 +299,66 @@ export default function MemberDetailPage() {
       return <div className="text-center py-8 text-gray-500">Không có review nào trong khoảng thời gian này</div>
     }
 
+    const totalPages = Math.ceil(activity.reviews.length / PAGE_SIZE)
+    const paginatedReviews = activity.reviews.slice((reviewsPage - 1) * PAGE_SIZE, reviewsPage * PAGE_SIZE)
+
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Title</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Date</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.reviews.map((review) => (
-              <tr key={review.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4">
-                  <div className="font-medium text-gray-900">{review.title}</div>
-                </td>
-                <td className="py-3 px-4">
-                  <Badge variant="outline" className="text-xs">
-                    {review.owner}/{review.repo}
-                  </Badge>
-                </td>
-                <td className="py-3 px-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {formatDate(review.date)}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <a
-                    href={review.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    View
-                  </a>
-                </td>
+      <div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">PR ID</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Repository</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900">Link</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedReviews.map((review) => (
+                <tr key={review.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">
+                    <div className="font-medium text-gray-900">{review.pr_id}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge variant="outline" className="text-xs">
+                      {review.owner}/{review.repo}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(review.date)}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <a
+                      href={review.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center mt-4 gap-2">
+            <Button variant="outline" size="sm" disabled={reviewsPage === 1} onClick={() => setReviewsPage(reviewsPage - 1)}>
+              Previous
+            </Button>
+            <span className="text-sm">Page {reviewsPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={reviewsPage === totalPages} onClick={() => setReviewsPage(reviewsPage + 1)}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     )
   }

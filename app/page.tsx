@@ -83,10 +83,29 @@ export default function PerformanceDashboard() {
         <PerformanceHeader />
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">Team Performance</h2>
-          <DateRangePicker onDateRangeChange={handleDateRangeChange} loading={loading} />
+          <div className="flex items-center gap-2">
+            <DateRangePicker onDateRangeChange={handleDateRangeChange} loading={loading} />
+            <button
+              onClick={() => {
+                document.cookie = "isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+                window.location.href = "/login"
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+            >
+              Log out
+            </button>
+          </div>
         </div>
         <WinnersPodium members={members.slice(0, 3)} />
-        <RankingsTable members={members} />
+        {/* Show loading spinner in table area when loading */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">Loading table...</span>
+          </div>
+        ) : (
+          <RankingsTable members={members} />
+        )}
       </div>
     </div>
   )
